@@ -13,6 +13,7 @@
       background: #0f172a;
       color: #e5e7eb;
       margin: 0;
+      overflow: hidden;
     }
 
     .box {
@@ -21,19 +22,21 @@
       border-radius: 14px;
       text-align: center;
       box-shadow: 0 15px 40px rgba(0,0,0,0.6);
-      max-width: 420px;
+      max-width: 460px;
+      z-index: 2;
     }
 
     button {
       background: #22c55e;
       color: #022c22;
       border: none;
-      padding: 16px 22px;
+      padding: 16px 24px;
       font-size: 1.2rem;
       border-radius: 10px;
       cursor: pointer;
       font-weight: bold;
       transition: transform 0.15s ease, box-shadow 0.15s ease;
+      margin-top: 15px;
     }
 
     button:hover {
@@ -42,27 +45,160 @@
     }
 
     #result {
-      margin-top: 30px;
+      margin-top: 25px;
       font-size: 1.8rem;
-      min-height: 2.5rem;
+      min-height: 3.5rem;
+    }
+
+    .toggle {
+      margin-bottom: 20px;
+      font-size: 0.95rem;
+    }
+
+    .confetti {
+      position: fixed;
+      width: 10px;
+      height: 10px;
+      top: -10px;
+      animation: fall linear forwards;
+      z-index: 1;
+    }
+
+    @keyframes fall {
+      to {
+        transform: translateY(110vh) rotate(720deg);
+        opacity: 0;
+      }
     }
   </style>
 </head>
 <body>
 
   <div class="box">
-    <button onclick="pickGame()">
+    <div class="toggle">
+      <label>
+        <input type="checkbox" id="bestOf3">
+        Best of 3 Mode
+      </label>
+    </div>
+
+    <button onclick="startPick()">
       🎲 Pick a Random Game to Play with Appu
     </button>
+
     <div id="result"></div>
   </div>
 
+  <!-- Sounds -->
+  <audio id="soundUNO" src="https://assets.mixkit.co/sfx/preview/mixkit-arcade-game-jump-coin-216.mp3"></audio>
+  <audio id="soundWords" src="https://assets.mixkit.co/sfx/preview/mixkit-soft-click-1121.mp3"></audio>
+  <audio id="soundQuiz" src="https://assets.mixkit.co/sfx/preview/mixkit-video-game-win-2016.mp3"></audio>
+  <audio id="drumRoll" src="https://assets.mixkit.co/sfx/preview/mixkit-drum-roll-566.mp3"></audio>
+
   <script>
-    function pickGame() {
-      const games = ["UNO", "Words", "Quiz"];
-      const choice = games[Math.floor(Math.random() * games.length)];
+    const games = ["UNO", "Words", "Quiz"];
+
+    const gameColors = {
+      UNO: ["#ff0000", "#ffd700", "#0000ff", "#00ff00"],
+      Words: ["#38bdf8", "#a78bfa", "#22d3ee"],
+      Quiz: ["#f97316", "#facc15", "#fb7185"]
+    };
+
+    const gameSounds = {
+      UNO: document.getElementById("soundUNO"),
+      Words: document.getElementById("soundWords"),
+      Quiz: document.getElementById("soundQuiz")
+    };
+
+    const drumRoll = document.getElementById("drumRoll");
+
+    function startPick() {
+      const isBestOf3 = document.getElementById("bestOf3").checked;
+      document.getElementById("result").innerText = "";
+
+      if (isBestOf3) {
+        bestOfThree();
+      } else {
+        singlePick();
+      }
+    }
+
+    function singlePick() {
+      const choice = pickRandom();
+      showFinal(choice);
+    }
+
+    function bestOfThree() {
+      let results = [];
+      let round = 0;
+
+      const interval = setInterval(() => {
+        const pick = pickRandom();
+        results.push(pick);
+        document.getElementById("result").innerText =
+          `Round ${round + 1}: ${pick}`;
+        round++;
+
+        if (round === 3) {
+          clearInterval(interval);
+
+          setTimeout(() => {
+            document.getElementById("result").innerText =
+              "🎬 And the final game is...";
+            playDrumRoll();
+
+            setTimeout(() => {
+              const winner = mostFrequent(results);
+              showFinal(winner, true);
+            }, 2500);
+
+          }, 700);
+        }
+      }, 800);
+    }
+
+    function pickRandom() {
+      return games[Math.floor(Math.random() * games.length)];
+    }
+
+    function mostFrequent(arr) {
+      return arr.sort((a,b) =>
+        arr.filter(v => v === a).length -
+        arr.filter(v => v === b).length
+      ).pop();
+    }
+
+    function showFinal(game, bestOf = false) {
       document.getElementById("result").innerText =
-        "You got: " + choice;
+        bestOf ? `🏆 Final Pick: ${game}` : `You Got: ${game}`;
+
+      playGameSound(game);
+      launchConfetti(gameColors[game]);
+    }
+
+    function playGameSound(game) {
+      const sound = gameSounds[game];
+      sound.currentTime = 0;
+      sound.play();
+    }
+
+    function playDrumRoll() {
+      drumRoll.currentTime = 0;
+      drumRoll.play();
+    }
+
+    function launchConfetti(colors) {
+      for (let i = 0; i < 90; i++) {
+        const c = document.createElement("div");
+        c.className = "confetti";
+        c.style.left = Math.random() * 100 + "vw";
+        c.style.backgroundColor =
+          colors[Math.floor(Math.random() * colors.length)];
+        c.style.animationDuration =
+          2 + Math.random() * 2 + "s";
+        document.body.appendChild(c);
+        setTimeout(() => c.remove(), 4000);
+      }
     }
   </script>
 
